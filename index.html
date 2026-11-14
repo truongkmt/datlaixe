@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Đặt Lái Xe</title>
+    <title>Hệ Thống Đặt Tài Xế</title>
     
-    <!-- Thêm Leaflet CSS & JS để hiển thị bản đồ thực tế -->
+    <!-- Leaflet CSS & JS cho bản đồ thực tế -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- SweetAlert2 để hiển thị thông báo đẹp mắt -->
+    <!-- SweetAlert2 cho thông báo -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
@@ -36,7 +36,6 @@
             color: var(--text-color);
         }
 
-        /* Vùng Nội Dung Chính */
         .main-content {
             display: grid;
             grid-template-columns: 450px 1fr;
@@ -45,7 +44,6 @@
             overflow: hidden;
         }
 
-        /* Form Đặt Lái Xe */
         .booking-panel {
             background-color: var(--card-bg);
             padding: 24px;
@@ -80,7 +78,7 @@
             padding: 12px 14px;
             border: 1px solid #ddd;
             border-radius: var(--border-radius);
-            font-size: 16px;
+            font-size: 16px; /* Kích thước >= 16px tránh iOS tự động zoom khi focus */
             outline: none;
             transition: 0.3s;
             width: 100%;
@@ -92,7 +90,6 @@
             box-shadow: 0 0 5px rgba(46, 206, 113, 0.3);
         }
 
-        /* Nút tính khoảng cách */
         .btn-calc {
             background-color: #3498db;
             color: white;
@@ -109,7 +106,6 @@
             background-color: #2980b9;
         }
 
-        /* Loại dịch vụ */
         .service-options {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -138,7 +134,6 @@
             color: var(--primary-color);
         }
 
-        /* Hoá đơn tạm tính */
         .price-summary {
             background-color: #f9f9f9;
             border-radius: var(--border-radius);
@@ -164,7 +159,6 @@
             margin-top: 4px;
         }
 
-        /* Nút bấm đặt xe */
         .btn-booking {
             background-color: var(--primary-color);
             color: white;
@@ -187,7 +181,6 @@
             transform: scale(0.98);
         }
 
-        /* Khu vực Bản Đồ Leaflet Thực Tế */
         .map-container {
             position: relative;
             width: 100%;
@@ -201,7 +194,6 @@
             z-index: 1;
         }
 
-        /* Thông báo trạng thái đặt xe */
         .status-overlay {
             position: absolute;
             top: 16px;
@@ -234,7 +226,6 @@
             100% { opacity: 1; }
         }
 
-        /* Responsive cho Mobile */
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -291,7 +282,7 @@
                 <input type="text" id="dropoff" value="Sân bay Nội Bài, Hà Nội" placeholder="Nhập địa chỉ đến...">
             </div>
 
-            <button class="btn-calc" id="btnCalcRoute">🧭 Tính quãng đường thực tế</button>
+            <button class="btn-calc" onclick="calculateRouteOnMap()">🧭 Tính quãng đường thực tế</button>
 
             <div class="input-group">
                 <label for="starttime">🕒 Thời gian khởi hành</label>
@@ -301,19 +292,19 @@
             <div class="input-group">
                 <label>Loại xe</label>
                 <div class="service-options">
-                    <div class="service-card selected" data-rate="15000">
+                    <div class="service-card selected" onclick="selectService(this, 15000)">
                         <div style="font-size:20px;">🏍️</div>
                         <p>Xe Máy</p>
                     </div>
-                    <div class="service-card" data-rate="30000">
+                    <div class="service-card" onclick="selectService(this, 30000)">
                         <div style="font-size:20px;">🚗</div>
                         <p>Ô tô</p>
                     </div>
-                    <div class="service-card" data-rate="50000">
+                    <div class="service-card" onclick="selectService(this, 50000)">
                         <div style="font-size:20px;">🚌</div>
                         <p>Xe khách</p>
                     </div>
-                    <div class="service-card" data-rate="50000">
+                    <div class="service-card" onclick="selectService(this, 50000)">
                         <div style="font-size:20px;">🚛</div>
                         <p>Xe Tải</p>
                     </div>
@@ -322,7 +313,7 @@
 
             <div class="input-group">
                 <label for="distance">📏 Khoảng cách thực tế (km)</label>
-                <input type="number" id="distance" value="5" step="0.1" min="0.5">
+                <input type="number" id="distance" value="5" step="0.1" min="0.5" oninput="calculatePrice()">
             </div>
 
             <div class="input-group">
@@ -353,12 +344,12 @@
                 </div>
             </div>
 
-            <button class="btn-booking" id="btnConfirmBooking">
+            <button class="btn-booking" onclick="confirmBooking()">
                 ✈️ YÊU CẦU ĐẶT XE
             </button>
         </section>
 
-        <!-- Khu vực Bản Đồ Leaflet Thực Tế -->
+        <!-- Bản đồ Leaflet -->
         <section class="map-container">
             <div id="real-map"></div>
 
@@ -376,8 +367,14 @@
         let currentRatePerKm = 15000;
         let map, pickupMarker, dropoffMarker, routePolyline;
 
-        // Đảm bảo đưa các hàm ra global scope tuyệt đối để Google Apps Script nhận diện
+        // THAY ĐƯỜNG DẪN WEB APP URL CỦA BẠN VÀO ĐÂY
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycb.../exec";
+
         window.initMap = function() {
+            if (typeof L === 'undefined') {
+                setTimeout(initMap, 500);
+                return;
+            }
             map = L.map('real-map').setView([21.0285, 105.8542], 13);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -385,7 +382,7 @@
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            calculateRouteOnMap();
+            window.calculateRouteOnMap();
         }
 
         window.selectService = function(element, rate) {
@@ -394,7 +391,7 @@
             });
             element.classList.add('selected');
             currentRatePerKm = rate;
-            calculatePrice();
+            window.calculatePrice();
         }
 
         window.getCoordinates = async function(address) {
@@ -420,11 +417,11 @@
                 return;
             }
 
-            const pickupCoord = await getCoordinates(pickupText);
-            const dropoffCoord = await getCoordinates(dropoffText);
+            const pickupCoord = await window.getCoordinates(pickupText);
+            const dropoffCoord = await window.getCoordinates(dropoffText);
 
             if (!pickupCoord || !dropoffCoord) {
-                alert('Không tìm thấy một trong hai địa chỉ trên bản đồ. Vui lòng nhập chi tiết hơn.');
+                alert('Không tìm thấy địa chỉ trên bản đồ. Vui lòng nhập chi tiết hơn.');
                 return;
             }
 
@@ -449,7 +446,7 @@
                     const distanceKm = (route.distance / 1000).toFixed(1);
 
                     document.getElementById('distance').value = distanceKm;
-                    calculatePrice();
+                    window.calculatePrice();
 
                     const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     routePolyline = L.polyline(coordinates, { color: '#3498db', weight: 6, opacity: 0.8 }).addTo(map);
@@ -458,13 +455,13 @@
                 }
             } catch (error) {
                 console.error("Lỗi định tuyến OSRM:", error);
-                const dist = calculateStraightDistance(pickupCoord.lat, pickupCoord.lon, dropoffCoord.lat, dropoffCoord.lon);
+                const dist = window.calculateStraightDistance(pickupCoord.lat, pickupCoord.lon, dropoffCoord.lat, dropoffCoord.lon);
                 document.getElementById('distance').value = dist.toFixed(1);
-                calculatePrice();
+                window.calculatePrice();
             }
         }
 
-        function calculateStraightDistance(lat1, lon1, lat2, lon2) {
+        window.calculateStraightDistance = function(lat1, lon1, lat2, lon2) {
             const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -490,121 +487,89 @@
             document.getElementById('total-price').innerText = Math.round(total).toLocaleString('vi-VN') + ' đ';
         }
 
-        window.showOrderCarList = function(data) {
-            console.log("Danh sách đơn đặt xe:", data);
-        }
+        // Đã tối ưu cho cả di động: xử lý an toàn phản hồi từ Google Apps Script
+        window.confirmBooking = async function() {
+            const selectedServiceCard = document.querySelector('.service-card.selected p');
+            const serviceType = selectedServiceCard ? selectedServiceCard.innerText : "Chưa chọn";
 
-    // // Thay link này bằng Web App URL của bạn sau khi Deploy
-    // const WEB_APP_URL = "";
-    
-    // async function callGAS(actionName, payloadData) {
-    //     try {
-    //         const response = await fetch(WEB_APP_URL, {
-    //             method: "POST",
-    //             // Không dùng mode: 'no-cors' nếu bạn muốn nhận lại kết quả JSON trả về từ Google Sheets
-    //             headers: {
-    //                 "Content-Type": "text/plain;charset=utf-8", // Tránh lỗi CORS preflight của Google Apps Script
-    //             },
-    //             body: JSON.stringify({
-    //                 action: actionName,
-    //                 payload: payloadData
-    //             })
-    //         });
-    
-    //         const result = await response.json();
-    //         return result;
-    //     } catch (error) {
-    //         console.error("Lỗi kết nối API:", error);
-    //         throw error;
-    //     }
-    // }
-        
-    window.confirmBooking = async function() {
-        const selectedServiceCard = document.querySelector('.service-card.selected p');
-        const serviceType = selectedServiceCard ? selectedServiceCard.innerText : "Chưa chọn";
-    
-        const customer = document.getElementById('customer').value.trim();
-        const mobileNo = document.getElementById('mobileNo').value.trim();
-        const pickup = document.getElementById('pickup').value.trim();
-        const dropoff = document.getElementById('dropoff').value.trim();
-        const starttime = document.getElementById('starttime').value.trim();
-        const distance = document.getElementById('distance').value;
-        const paymentMethod = document.getElementById('payment').options[document.getElementById('payment').selectedIndex].text;
-        const vatPrice = document.getElementById('vat-price').innerText;
-        const totalPrice = document.getElementById('total-price').innerText;
-    
-        if (!pickup || !dropoff) {
-            alert('Vui lòng nhập đầy đủ Điểm đón và Điểm đến.');
-            return;
-        }
-    
-        Swal.fire({
-            title: 'Đang kết nối tài xế...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-    
-        const payloadData = {
-            action: "saveBooking",
-            payload: {
-                customer, mobileNo, pickup, dropoff, starttime, 
-                serviceType, distance, paymentMethod, vatPrice, totalPrice, 
-                status: "Chờ xác nhận"
+            const customer = document.getElementById('customer').value.trim();
+            const mobileNo = document.getElementById('mobileNo').value.trim();
+            const pickup = document.getElementById('pickup').value.trim();
+            const dropoff = document.getElementById('dropoff').value.trim();
+            const starttime = document.getElementById('starttime').value.trim();
+            const distance = document.getElementById('distance').value;
+            const paymentMethod = document.getElementById('payment').options[document.getElementById('payment').selectedIndex].text;
+            const vatPrice = document.getElementById('vat-price').innerText;
+            const totalPrice = document.getElementById('total-price').innerText;
+
+            if (!pickup || !dropoff) {
+                alert('Thiếu thông tin!\nVui lòng nhập đầy đủ Điểm đón và Điểm đến.');
+                return;
             }
-        };
-    
-        // Thay link này bằng Web App URL thực tế của bạn
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxNR0RZ4g-2GpXvfDiNKnp-2oAmMAgH_wEBNUbQFAbI9DqY1EN6TKg5R5yh9x3sGQ2J/exec";
-    
-        try {
-            const response = await fetch(WEB_APP_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8",
-                },
-                body: JSON.stringify(payloadData)
-            });
-    
-            Swal.close();
-    
-            // Trên điện thoại đôi khi Google trả về HTML redirect thay vì JSON thuần.
-            // Vì server đã chạy qua lệnh appendRow ở Apps Script nên tới đây chắc chắn là thành công.
+
             Swal.fire({
-                title: 'Đặt xe thành công!',
-                text: 'Thông tin đặt xe đã được ghi nhận vào hệ thống.',
-                icon: 'success',
-                confirmButtonColor: '#16a34a'
+                title: 'Đang kết nối tài xế gần nhất...',
+                text: 'Vui lòng chờ trong ít phút.',
+                icon: 'info',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
             });
-            
-            // Hiển thị trạng thái trên giao diện
-            const statusBox = document.getElementById('statusBox');
-            const statusText = document.getElementById('statusText');
-            statusBox.style.display = 'flex';
-            statusText.innerText = 'Tài xế đang đến điểm đón!';
-    
-        } catch (error) {
-            Swal.close();
-            console.error("Lỗi fetch:", error);
-            // Chỉ báo lỗi nếu mất mạng hoàn toàn hoặc đứt kết nối vật lý
-            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ Google.', 'error');
-        }
-    };
 
-        // Lắng nghe sự kiện an toàn tuyệt đối tránh lỗi scope của Google Apps Script
-        window.addEventListener('DOMContentLoaded', () => {
-            initMap();
+            const payloadData = {
+                action: "saveBooking",
+                payload: {
+                    customer, mobileNo, pickup, dropoff, starttime, 
+                    serviceType, distance, paymentMethod, vatPrice, totalPrice, 
+                    status: "Chờ xác nhận"
+                }
+            };
 
-            document.getElementById('btnCalcRoute').addEventListener('click', calculateRouteOnMap);
-            document.getElementById('btnConfirmBooking').addEventListener('click', confirmBooking);
-            document.getElementById('distance').addEventListener('input', calculatePrice);
-
-            document.querySelectorAll('.service-card').forEach(card => {
-                card.addEventListener('click', function() {
-                    const rate = parseFloat(this.getAttribute('data-rate'));
-                    selectService(this, rate);
+            try {
+                // Gửi request POST tới Google Apps Script
+                await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8",
+                    },
+                    body: JSON.stringify(payloadData)
                 });
-            });
-        });
+
+                // Đóng bảng loading
+                Swal.close();
+
+                // Hiển thị thông báo thành công (Tối ưu cho cả điện thoại di động)
+                Swal.fire({
+                    title: 'Đặt xe thành công!',
+                    text: 'Thông tin đặt xe đã được ghi nhận.',
+                    icon: 'success',
+                    confirmButtonColor: '#16a34a',
+                    confirmButtonText: 'Đồng ý',
+                    showCloseButton: true
+                });
+
+                // Kích hoạt giao diện trạng thái chuyến đi
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                const statusDot = document.querySelector('.status-dot');
+                
+                statusBox.style.display = 'flex';
+                statusDot.style.backgroundColor = '#2ece71'; 
+                statusText.innerText = 'Tài xế đang đến điểm đón!';
+
+            } catch (error) {
+                Swal.close();
+                console.error("Lỗi kết nối:", error);
+                Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ Google.', 'error');
+            }
+        }
+
+        window.onload = function() {
+            window.initMap();
+        };
     </script>
 
 </body>
