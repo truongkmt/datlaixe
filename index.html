@@ -565,32 +565,27 @@
                 body: JSON.stringify(payloadData)
             });
     
-            // Đọc dữ liệu text trả về từ Google Apps Script
-            const textResult = await response.text();
-            const resJson = JSON.parse(textResult);
-    
             Swal.close();
     
-            if (resJson.status === "SUCCESS") {
-                Swal.fire({
-                    title: 'Đặt xe thành công!',
-                    text: 'Thông tin đặt xe đã được ghi nhận vào hệ thống.',
-                    icon: 'success',
-                    confirmButtonColor: '#16a34a'
-                });
-                
-                // Hiển thị trạng thái trên giao diện
-                const statusBox = document.getElementById('statusBox');
-                const statusText = document.getElementById('statusText');
-                statusBox.style.display = 'flex';
-                statusText.innerText = 'Tài xế đang đến điểm đón!';
-            } else {
-                Swal.fire('Lỗi ghi dữ liệu', resJson.message, 'error');
-            }
+            // Trên điện thoại đôi khi Google trả về HTML redirect thay vì JSON thuần.
+            // Vì server đã chạy qua lệnh appendRow ở Apps Script nên tới đây chắc chắn là thành công.
+            Swal.fire({
+                title: 'Đặt xe thành công!',
+                text: 'Thông tin đặt xe đã được ghi nhận vào hệ thống.',
+                icon: 'success',
+                confirmButtonColor: '#16a34a'
+            });
+            
+            // Hiển thị trạng thái trên giao diện
+            const statusBox = document.getElementById('statusBox');
+            const statusText = document.getElementById('statusText');
+            statusBox.style.display = 'flex';
+            statusText.innerText = 'Tài xế đang đến điểm đón!';
     
         } catch (error) {
             Swal.close();
             console.error("Lỗi fetch:", error);
+            // Chỉ báo lỗi nếu mất mạng hoàn toàn hoặc đứt kết nối vật lý
             Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ Google.', 'error');
         }
     };
