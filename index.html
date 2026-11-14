@@ -494,75 +494,106 @@
             console.log("Danh sách đơn đặt xe:", data);
         }
 
-    // Thay link này bằng Web App URL của bạn sau khi Deploy
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwHsa-sox_Lqxl433eWFKSwZedTCfW0j8nChKi3VfSm2deeDd48-E6upkmAOPrDz3DB/exec";
+    // // Thay link này bằng Web App URL của bạn sau khi Deploy
+    // const WEB_APP_URL = "";
     
-    async function callGAS(actionName, payloadData) {
+    // async function callGAS(actionName, payloadData) {
+    //     try {
+    //         const response = await fetch(WEB_APP_URL, {
+    //             method: "POST",
+    //             // Không dùng mode: 'no-cors' nếu bạn muốn nhận lại kết quả JSON trả về từ Google Sheets
+    //             headers: {
+    //                 "Content-Type": "text/plain;charset=utf-8", // Tránh lỗi CORS preflight của Google Apps Script
+    //             },
+    //             body: JSON.stringify({
+    //                 action: actionName,
+    //                 payload: payloadData
+    //             })
+    //         });
+    
+    //         const result = await response.json();
+    //         return result;
+    //     } catch (error) {
+    //         console.error("Lỗi kết nối API:", error);
+    //         throw error;
+    //     }
+    // }
+        
+    window.confirmBooking = async function() {
+        const selectedServiceCard = document.querySelector('.service-card.selected p');
+        const serviceType = selectedServiceCard ? selectedServiceCard.innerText : "Chưa chọn";
+    
+        const customer = document.getElementById('customer').value.trim();
+        const mobileNo = document.getElementById('mobileNo').value.trim();
+        const pickup = document.getElementById('pickup').value.trim();
+        const dropoff = document.getElementById('dropoff').value.trim();
+        const starttime = document.getElementById('starttime').value.trim();
+        const distance = document.getElementById('distance').value;
+        const paymentMethod = document.getElementById('payment').options[document.getElementById('payment').selectedIndex].text;
+        const vatPrice = document.getElementById('vat-price').innerText;
+        const totalPrice = document.getElementById('total-price').innerText;
+    
+        if (!pickup || !dropoff) {
+            alert('Vui lòng nhập đầy đủ Điểm đón và Điểm đến.');
+            return;
+        }
+    
+        Swal.fire({
+            title: 'Đang kết nối tài xế...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+    
+        const payloadData = {
+            action: "saveBooking",
+            payload: {
+                customer, mobileNo, pickup, dropoff, starttime, 
+                serviceType, distance, paymentMethod, vatPrice, totalPrice, 
+                status: "Chờ xác nhận"
+            }
+        };
+    
+        // Thay link này bằng Web App URL thực tế của bạn
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwHsa-sox_Lqxl433eWFKSwZedTCfW0j8nChKi3VfSm2deeDd48-E6upkmAOPrDz3DB/exec";
+    
         try {
             const response = await fetch(WEB_APP_URL, {
                 method: "POST",
-                // Không dùng mode: 'no-cors' nếu bạn muốn nhận lại kết quả JSON trả về từ Google Sheets
                 headers: {
-                    "Content-Type": "text/plain;charset=utf-8", // Tránh lỗi CORS preflight của Google Apps Script
+                    "Content-Type": "text/plain;charset=utf-8",
                 },
-                body: JSON.stringify({
-                    action: actionName,
-                    payload: payloadData
-                })
+                body: JSON.stringify(payloadData)
             });
     
-            const result = await response.json();
-            return result;
+            // Đọc dữ liệu text trả về từ Google Apps Script
+            const textResult = await response.text();
+            const resJson = JSON.parse(textResult);
+    
+            Swal.close();
+    
+            if (resJson.status === "SUCCESS") {
+                Swal.fire({
+                    title: 'Đặt xe thành công!',
+                    text: 'Thông tin đặt xe đã được ghi nhận vào hệ thống.',
+                    icon: 'success',
+                    confirmButtonColor: '#16a34a'
+                });
+                
+                // Hiển thị trạng thái trên giao diện
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                statusBox.style.display = 'flex';
+                statusText.innerText = 'Tài xế đang đến điểm đón!';
+            } else {
+                Swal.fire('Lỗi ghi dữ liệu', resJson.message, 'error');
+            }
+    
         } catch (error) {
-            console.error("Lỗi kết nối API:", error);
-            throw error;
+            Swal.close();
+            console.error("Lỗi fetch:", error);
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ Google.', 'error');
         }
-    }
-        
-    async function confirmBooking() {
-    const selectedServiceCard = document.querySelector('.service-card.selected p');
-    const serviceType = selectedServiceCard ? selectedServiceCard.innerText : "Chưa chọn";
-
-    const mobileNo = document.getElementById('mobileNo').value.trim();
-    const customer = document.getElementById('customer').value.trim();
-    const pickup = document.getElementById('pickup').value.trim();
-    const dropoff = document.getElementById('dropoff').value.trim();
-    const starttime = document.getElementById('starttime').value.trim();
-    const distance = document.getElementById('distance').value;
-    const paymentMethod = document.getElementById('payment').options[document.getElementById('payment').selectedIndex].text;
-    const vatPrice = document.getElementById('vat-price').innerText;
-    const totalPrice = document.getElementById('total-price').innerText;
-    const status = "Chờ xác nhận";
-    // ... lấy các dữ liệu khác ...
-
-    const bookingData = {
-        customer, mobileNo, pickup, dropoff, starttime, 
-        serviceType, distance, paymentMethod, vatPrice, totalPrice, 
-        status: "Chờ xác nhận"
     };
-
-    try {
-        // Hiển thị loading
-        Swal.fire({ title: 'Đang gửi yêu cầu...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-        // Gọi hàm qua fetch với action là "saveBooking"
-        const response = await callGAS("saveBooking", bookingData);
-
-        Swal.close();
-
-        if (response.status === "SUCCESS") {
-            Swal.fire('Thành công!', 'Đã ghi nhận thông tin đặt xe.', 'success');
-            // Gọi tiếp hàm lấy danh sách nếu muốn cập nhật bảng
-            loadOrderList(); 
-        } else {
-            Swal.fire('Lỗi', response.message, 'error');
-        }
-
-    } catch (error) {
-        Swal.close();
-        Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ Google.', 'error');
-    }
-}
 
         // Lắng nghe sự kiện an toàn tuyệt đối tránh lỗi scope của Google Apps Script
         window.addEventListener('DOMContentLoaded', () => {
