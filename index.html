@@ -520,8 +520,19 @@
     }
         
     async function confirmBooking() {
-    const customer = document.getElementById('customer').value.trim();
+    const selectedServiceCard = document.querySelector('.service-card.selected p');
+    const serviceType = selectedServiceCard ? selectedServiceCard.innerText : "Chưa chọn";
+
     const mobileNo = document.getElementById('mobileNo').value.trim();
+    const customer = document.getElementById('customer').value.trim();
+    const pickup = document.getElementById('pickup').value.trim();
+    const dropoff = document.getElementById('dropoff').value.trim();
+    const starttime = document.getElementById('starttime').value.trim();
+    const distance = document.getElementById('distance').value;
+    const paymentMethod = document.getElementById('payment').options[document.getElementById('payment').selectedIndex].text;
+    const vatPrice = document.getElementById('vat-price').innerText;
+    const totalPrice = document.getElementById('total-price').innerText;
+    const status = "Chờ xác nhận";
     // ... lấy các dữ liệu khác ...
 
     const bookingData = {
